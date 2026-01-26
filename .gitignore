@@ -1,0 +1,10 @@
+# 1. Ignore everything
+*
+
+# 2. Allow the .gitignore file itself
+!.gitignore
+
+# 3. Allow only your specific project files
+!fuzzy.py
+!referance.pdf
+!spam.csv
