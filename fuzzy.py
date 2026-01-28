@@ -63,7 +63,7 @@ print(classification_report(test_labels, test_predictions, target_names=['Non-SP
 
 # Interactive email spam checker
 def check_spam_rate():
-    user_input = input("\nEnter email content (or 'quit' to exit):\n")
+    user_input = input("\n paste email content  :\n")
     
     if user_input.lower() == 'quit':
         return False
