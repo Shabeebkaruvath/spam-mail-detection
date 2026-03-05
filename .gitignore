@@ -7,5 +7,5 @@
 # 3. Allow only your specific project files
 !fuzzy.py
 !spam.csv
-!README.html
+!README.md
 !sample mails.txt
