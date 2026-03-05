@@ -1,253 +1,205 @@
-1. Training Phase (train())
+# 📧 Fuzzy Logic Spam Classifier
 
-Reads the dataset (spam.csv) and learns patterns.
+A rule-based spam detection system using fuzzy logic to classify emails as **SPAM** or **HAM** with confidence scoring.
 
-Steps
+---
 
-Load dataset
+## Table of Contents
 
-Each row → (label, email_text)
+1. [Training Phase](#1-training-phase)
+2. [Feature Extraction](#2-feature-extraction)
+3. [Threshold Learning](#3-threshold-learning)
+4. [Fuzzy System Construction](#4-fuzzy-system-construction)
+5. [Fuzzy Rules](#5-fuzzy-rules)
+6. [Classification](#6-classification)
+7. [Decision Rule](#7-decision-rule)
 
-Label = spam or ham.
+---
 
-Separate texts
+## 1. Training Phase
 
-spam_texts
+> `train()` — Reads the dataset (`spam.csv`) and learns spam patterns.
 
-ham_texts
+### Steps
 
-Word frequency calculation
+1. **Load dataset** — Each row maps to a `(label, email_text)` pair where label is either `spam` or `ham`.
+2. **Separate texts** — Splits emails into `spam_texts` and `ham_texts`.
+3. **Word frequency calculation** — Uses `collections.Counter` to count word occurrences in each category.
+4. **Find spam keywords** — A word is flagged as a spam keyword if it meets both conditions:
+   - Appears **≥ 8 times** in spam emails
+   - Has a **Spam Ratio ≥ 5**, calculated as:
 
-Uses collections.Counter.
+$$\text{SpamRatio} = \frac{c \ / \ \text{spam\_count}}{(\text{ham\_count} \ / \ \text{ham\_total}) + 0.005}$$
 
-Counts words appearing in spam and ham emails.
+### Example Keywords Learned
 
-Find spam keywords
+| Keyword  |
+|----------|
+| `free`   |
+| `win`    |
+| `prize`  |
+| `offer`  |
+| `click`  |
+| `urgent` |
 
-A word becomes a spam keyword if:
+---
 
-Appears ≥ 8 times in spam
+## 2. Feature Extraction
 
-Appears much more in spam than ham
+> `raw_features()` / `extract_features()` — Converts each email into numerical features normalized to the **0–1 range**.
 
-Formula used:
+### Features
 
-𝑆
-𝑝
-𝑎
-𝑚
-𝑅
-𝑎
-𝑡
-𝑖
-𝑜
-=
-𝑐
-/
-𝑠
-𝑝
-𝑎
-𝑚
-_
-𝑐
-𝑜
-𝑢
-𝑛
-𝑡
-(
-ℎ
-𝑎
-𝑚
-_
-𝑐
-𝑜
-𝑢
-𝑛
-𝑡
-/
-ℎ
-𝑎
-𝑚
-_
-𝑡
-𝑜
-𝑡
-𝑎
-𝑙
-)
-+
-0.005
-SpamRatio=
-(ham_count/ham_total)+0.005
-c/spam_count
-	​
+| Feature               | Description                          |
+|-----------------------|--------------------------------------|
+| `spam_kw_score`       | Ratio of spam keywords in the message |
+| `uppercase_ratio`     | Percentage of uppercase letters       |
+| `exclamation_density` | Number of `!` marks per word          |
+| `digit_ratio`         | Percentage of digit characters        |
+| `url_score`           | Number of links detected              |
 
+### Example
 
-If ratio ≥ 5, the word is treated as spam keyword.
-
-Example keywords learned:
-
-free
-win
-prize
-offer
-click
-urgent
-2. Feature Extraction (raw_features() / extract_features())
-
-Each email is converted into numerical features (0–1 range).
-
-Features used:
-
-Feature	Meaning
-spam_kw_score	ratio of spam keywords in message
-uppercase_ratio	% of uppercase letters
-exclamation_density	number of ! per word
-digit_ratio	% of digits
-url_score	number of links
-
-Example email:
-
+**Input email:**
+```
 WIN FREE PRIZE!!! Click http://offer.com now
+```
 
-Feature output example:
+**Output features:**
+```
+spam_kw_score       = 0.40
+uppercase_ratio     = 0.35
+exclamation_density = 0.30
+digit_ratio         = 0.00
+url_score           = 0.33
+```
 
-spam_kw_score = 0.4
-uppercase_ratio = 0.35
-exclamation_density = 0.3
-digit_ratio = 0
-url_score = 0.33
-3. Threshold Learning
+---
 
-For each feature, the code calculates percentiles:
+## 3. Threshold Learning
 
-From ham emails
+For each feature, percentile boundaries are calculated separately from ham and spam emails to define fuzzy decision zones.
 
-ham_p75
-ham_p90
+| Source       | Percentiles Computed      |
+|--------------|---------------------------|
+| Ham emails   | `ham_p75`, `ham_p90`      |
+| Spam emails  | `spam_p10`, `spam_p25`    |
 
-From spam emails
+### Example — `uppercase_ratio`
 
-spam_p10
-spam_p25
-
-These define fuzzy boundaries.
-
-Example:
-
-uppercase_ratio
-ham_p75 = 0.05
-ham_p90 = 0.08
+```
+ham_p75  = 0.05
+ham_p90  = 0.08
 spam_p10 = 0.10
 spam_p25 = 0.18
-4. Fuzzy System Construction (build_fuzzy_system())
+```
 
-Uses skfuzzy to create fuzzy variables.
+---
 
-Input variables
+## 4. Fuzzy System Construction
 
-Each feature becomes an Antecedent.
+> `build_fuzzy_system()` — Uses `skfuzzy` to model uncertainty in classification.
 
-Example:
+### Input Variables (Antecedents)
 
-spam_kw_score
-uppercase_ratio
-exclamation_density
-digit_ratio
-url_score
+Each of the five features becomes a fuzzy variable with two membership sets:
 
-Each has two fuzzy sets
+| Membership Set | Shape        | Represents     |
+|----------------|--------------|----------------|
+| `LOW`          | Trapezoidal  | Ham-like values |
+| `HIGH`         | Trapezoidal  | Spam-like values |
 
-LOW
-HIGH
+**Conceptual membership graph:**
+```
+LOW         HIGH
+ |--\    /--|
+ 0  0.3 0.7  1
+```
 
-Membership functions:
+### Output Variable (Consequent)
 
-LOW  = trapezoidal (ham-like values)
-HIGH = trapezoidal (spam-like values)
+**`spam_score`** — ranges from **0 to 100**
 
-Example graph concept:
+| Class  | Range   | Membership Function        |
+|--------|---------|----------------------------|
+| `HAM`  | 0 – 50  | `trimf(0, 25, 50)`         |
+| `SPAM` | 50 – 100| `trimf(50, 75, 100)`       |
 
-LOW      HIGH
- |--------|
-0   0.3  0.7   1
-Output variable
-spam_score (0–100)
+---
 
-Two fuzzy classes:
+## 5. Fuzzy Rules
 
-HAM  -> 0–50
-SPAM -> 50–100
+Rules encode human-like reasoning to infer spam probability.
 
-Membership functions:
+### 🟢 HAM Rules
 
-HAM  = trimf(0,25,50)
-SPAM = trimf(50,75,100)
-5. Fuzzy Rules
+```
+IF keyword_score=LOW  AND uppercase=LOW AND exclamation=LOW  → HAM
+IF keyword_score=LOW  AND url=LOW                            → HAM
+```
 
-Rules determine spam probability.
+### 🔴 SPAM Rules
 
-HAM rules
+```
+IF keyword_score=HIGH                                        → SPAM
+IF keyword_score=HIGH AND url=HIGH                          → SPAM
+IF uppercase=HIGH     AND exclamation=HIGH AND url=HIGH     → SPAM
+```
 
-Examples:
+---
 
-IF keyword_score LOW AND uppercase LOW AND exclamation LOW
-THEN HAM
-IF keyword_score LOW AND url LOW
-THEN HAM
-SPAM rules
+## 6. Classification
 
-Examples:
+> `classify()` — Runs a full fuzzy inference pipeline on a user-provided email.
 
-IF keyword_score HIGH
-THEN SPAM
-IF keyword_score HIGH AND url HIGH
-THEN SPAM
-IF uppercase HIGH AND exclamation HIGH AND url HIGH
-THEN SPAM
+### Pipeline
 
-These rules mimic human reasoning.
+```
+Email Input
+    │
+    ▼
+① Extract Features
+    │
+    ▼
+② Feed into Fuzzy System
+   sim.input[feature] = value
+    │
+    ▼
+③ Fuzzy Inference
+   ┌─────────────────────────────┐
+   │  Fuzzification              │
+   │       → Rule Evaluation     │
+   │           → Aggregation     │
+   │               → Defuzz.     │
+   └─────────────────────────────┘
+    │
+    ▼
+④ Output: spam_score (0–100)
+```
 
-6. Classification (classify())
+---
 
-When a user pastes an email:
+## 7. Decision Rule
 
-Step 1
+### Classification Threshold
 
-Extract features.
+| Condition       | Result |
+|-----------------|--------|
+| `score >= 50`   | 🔴 SPAM |
+| `score < 50`    | 🟢 HAM  |
 
-Step 2
+### Confidence Levels
 
-Feed features into fuzzy system:
+| Condition              | Confidence |
+|------------------------|------------|
+| `\|score - 50\| > 25`  | High       |
+| `\|score - 50\| > 10`  | Medium     |
+| Otherwise              | Low        |
 
-sim.input[feature] = value
-Step 3
+### Example Output
 
-Fuzzy inference runs
-
-Process:
-
-Fuzzification
-→ Rule evaluation
-→ Aggregation
-→ Defuzzification
-
-Final output:
-
-spam_score (0–100)
-7. Decision Rule
-score >= 50  → SPAM
-score < 50   → HAM
-
-Confidence:
-
-|score-50| > 25 → High
-|score-50| > 10 → Medium
-else → Low
-
-Example output:
-
+```
 RESULT     : SPAM
 SPAM SCORE : 78.3 / 100
 CONFIDENCE : High
- 
+```
