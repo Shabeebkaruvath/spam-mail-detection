@@ -69,7 +69,7 @@ def build_fuzzy_system(thresholds):
 
     kw, up, ex, dg, ur = [ants[k] for k in thresholds]
     rules = [
-        # HAM rules
+        # HAMLESS rules
         ctrl.Rule(kw['low'] & up['low'] & ex['low'],                         out['ham']),
         ctrl.Rule(kw['low'] & ur['low'],                                      out['ham']),
         ctrl.Rule(kw['low'] & up['low'] & ex['low'] & dg['low'] & ur['low'], out['ham']),
