@@ -29,7 +29,6 @@ A rule-based spam detection system using fuzzy logic to classify emails as **SPA
    - Appears **≥ 8 times** in spam emails
    - Has a **Spam Ratio ≥ 5**, calculated as:
 
-$$\text{SpamRatio} = \frac{c \ / \ \text{spam\_count}}{(\text{ham\_count} \ / \ \text{ham\_total}) + 0.005}$$
 
 ### Example Keywords Learned
 
