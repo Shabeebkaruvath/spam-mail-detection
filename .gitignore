@@ -6,6 +6,5 @@
 
 # 3. Allow only your specific project files
 !fuzzy.py
-!referance.pdf
 !spam.csv
 !spam_detection_explanation.docx
