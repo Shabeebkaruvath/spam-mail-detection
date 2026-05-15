@@ -1,6 +1,6 @@
 # 📧 Fuzzy Logic Spam Classifier
 
-A rule-based spam detection system using fuzzy logic to classify emails as **SPAM  ** or **HAM** with confidence scoring.
+A rule-based spam detection system using fuzzy logic to classify emails as **SPAM** or **HAM** with confidence scoring.
 
 ---
 
